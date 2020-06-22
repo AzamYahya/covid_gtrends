@@ -86,20 +86,23 @@ external_trade %>%
   pivot_longer(-date_dirty, names_to = "header",
                values_to = "values") %>%
   mutate(header = case_when(
-    header == "balance_trade" ~ "Trade Balance($'000')",
-    header == "exports" ~ "Export($'000')",
-    header == "imports" ~ "Imports($'000')",
+    header == "balance_trade" ~ "Trade Balance(USD Million)",
+    header == "exports" ~ "Export(USD Million)",
+    header == "imports" ~ "Imports(USD Million)",
     TRUE ~ as.character(header))) %>% 
   group_by(header) %>% 
   mutate(values = rollapply(values, 6, mean,align = "right", fill = NA)) %>% 
-  mutate(date_dirty = decimal_date(date_dirty)) %>% 
+  mutate(date_dirty = decimal_date(date_dirty)) %>%
+  ungroup() %>% 
+  mutate_at(vars(header), funs(factor(., levels=unique(.)))) %>% # convert to factor
   ggplot() + 
   geom_line(aes(x=date_dirty, y=values, color = header), size = 1)+
   geom_rect(data=shade, 
             mapping=aes(xmin=x1, xmax=x2, ymin=y1, ymax=y2),
             color='gray', alpha=0.4)+
   theme_bw()+
-  facet_grid(header~., scales = "free_y")+
+  facet_grid(header~., scales = "free_y",
+             labeller=label_wrap_gen(width=10))+
   ylab("") + xlab("")+
   theme(legend.title = element_blank())+
   theme(strip.text.y = element_text(size = 7))+
